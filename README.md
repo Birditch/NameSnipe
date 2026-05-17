@@ -30,7 +30,7 @@ Domain search tools often mix discovery, pricing, and purchase into one flow. Na
 - Domains above budget are rejected.
 - Batch totals above budget are rejected.
 - Billable registration is never retried blindly, including `202 Accepted` responses.
-- API tokens are stored in system keyring where available and are never printed.
+- Cloudflare API settings are stored in `./namesnipe-config.json` in the directory where you run NameSnipe. The file is ignored by git by default and token values are never printed.
 
 NameSnipe is local-first and safe by default in every language.
 
@@ -76,13 +76,32 @@ The initializer asks for:
 - dry-run default
 - UI language
 
-The API token is written to system keyring when possible. If keyring is unavailable, set:
+The API token and non-sensitive settings are written to `./namesnipe-config.json` in the current working directory. This is a local JSON file intended for your machine only.
+
+Example shape:
+
+```json
+{
+  "account_id": "your-cloudflare-account-id",
+  "max_price_usd": "10.00",
+  "max_total_usd": "50.00",
+  "tld_allowlist": ["link", "cc", "xyz", "icu", "dev", "app", "com"],
+  "auto_renew": false,
+  "dry_run": true,
+  "privacy_mode": "redaction",
+  "years": 1,
+  "ui": {
+    "language": "en"
+  },
+  "cloudflare_api_token": "your-local-token"
+}
+```
+
+`namesnipe-config.json` is listed in `.gitignore`. Do not commit it. For a temporary token override, set:
 
 ```bash
 export CLOUDFLARE_API_TOKEN="..."
 ```
-
-Only non-sensitive settings are written to `config.toml`.
 
 ## CLI Examples
 
@@ -171,7 +190,7 @@ Language priority:
 
 1. CLI `--lang`
 2. `NAMESNIPE_LANG`
-3. `config.toml` `[ui].language`
+3. `namesnipe-config.json` `ui.language`
 4. system locale
 5. `en`
 
@@ -209,7 +228,7 @@ NameSnipe intentionally does not provide:
 - Telemetry
 - Automatic infinite retries
 - Bypassing Cloudflare Registrar limitations
-- Plaintext token storage
+- Cloud token storage
 - Default live purchase mode
 
 ## Development

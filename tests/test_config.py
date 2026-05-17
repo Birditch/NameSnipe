@@ -11,6 +11,7 @@ from namesnipe.i18n import (
     t,
 )
 from namesnipe.models import AppConfig
+from namesnipe.storage import config_path, get_api_token, set_api_token
 
 
 def test_default_language_fallback_to_en(monkeypatch) -> None:
@@ -19,7 +20,7 @@ def test_default_language_fallback_to_en(monkeypatch) -> None:
 
 
 def test_config_language_zh_cn(tmp_path) -> None:
-    path = tmp_path / "config.toml"
+    path = tmp_path / "namesnipe-config.json"
     save_config(AppConfig(ui={"language": "zh-CN"}), path)
     assert load_config(path).ui.language == "zh-CN"
 
@@ -57,7 +58,7 @@ def test_all_required_keys_exist_in_en() -> None:
 
 
 def test_config_decimal_round_trip(tmp_path) -> None:
-    path = tmp_path / "config.toml"
+    path = tmp_path / "namesnipe-config.json"
     save_config(
         AppConfig(max_price_usd=Decimal("12.34"), max_total_usd=Decimal("56.78")),
         path,
@@ -65,3 +66,25 @@ def test_config_decimal_round_trip(tmp_path) -> None:
     loaded = load_config(path)
     assert loaded.max_price_usd == Decimal("12.34")
     assert loaded.max_total_usd == Decimal("56.78")
+
+
+def test_config_path_is_run_directory_json(tmp_path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    assert config_path() == tmp_path / "namesnipe-config.json"
+
+
+def test_api_token_saved_in_local_json(tmp_path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    save_config(AppConfig(account_id="account-id"))
+    assert set_api_token("local-token")
+    assert get_api_token() == "local-token"
+    contents = config_path().read_text(encoding="utf-8")
+    assert '"cloudflare_api_token": "local-token"' in contents
+    assert load_config().account_id == "account-id"
+
+
+def test_env_token_overrides_local_json(tmp_path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    set_api_token("local-token")
+    monkeypatch.setenv("CLOUDFLARE_API_TOKEN", "env-token")
+    assert get_api_token() == "env-token"

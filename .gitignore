@@ -3,6 +3,8 @@ AGENTS.md
 .env
 .env.*
 !.env.example
+namesnipe-config.json
+namesnipe-config.*.json
 .venv/
 venv/
 __pycache__/

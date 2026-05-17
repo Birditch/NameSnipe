@@ -12,9 +12,9 @@ Please report vulnerabilities through GitHub Security Advisories when available,
 
 ## Secret Handling
 
-- Cloudflare API tokens are stored in system keyring when available.
-- `CLOUDFLARE_API_TOKEN` is supported as a local environment fallback.
-- Tokens must not be written to `config.toml`.
+- Cloudflare API tokens are stored in `./namesnipe-config.json` in the directory where NameSnipe is run.
+- `namesnipe-config.json` is ignored by git by default and must not be committed.
+- `CLOUDFLARE_API_TOKEN` is supported as a temporary local environment override.
 - Logs and errors must not include full tokens or Authorization headers.
 
 ## Billable Action Boundary

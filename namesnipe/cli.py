@@ -112,10 +112,9 @@ def init_command(
         ui={"language": selected_language},
     )
     path = save_config(config)
-    if token and set_api_token(token):
-        console.print(t("config.token_saved_keyring"))
-    else:
-        console.print(t("config.token_env_required"))
+    if token:
+        set_api_token(token)
+        console.print(t("config.token_saved_local_json", path=path))
     console.print(t("config.saved", path=path))
 
 
