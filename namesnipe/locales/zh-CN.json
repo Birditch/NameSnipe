@@ -114,6 +114,7 @@
   "tui.config_links": "Cloudflare 链接：Account ID 说明 https://developers.cloudflare.com/fundamentals/setup/find-account-and-zone-ids/ | Token 页面 https://dash.cloudflare.com/profile/api-tokens",
   "tui.save_config": "保存配置",
   "tui.verify_token": "测试 Token",
+  "tui.working": "正在执行... 可能需要几秒钟。",
   "tui.restart_required": "请重启 TUI，让语言修改完整生效。",
   "tui.placeholder": "第一版已接入本地优先安全流程。CLI 命令负责实际 API 操作。",
   "tui.keyword": "关键词",

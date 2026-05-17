@@ -114,6 +114,7 @@
   "tui.config_links": "Cloudflare links: Account ID docs https://developers.cloudflare.com/fundamentals/setup/find-account-and-zone-ids/ | Token page https://dash.cloudflare.com/profile/api-tokens",
   "tui.save_config": "Save config",
   "tui.verify_token": "Test token",
+  "tui.working": "Working... this may take a few seconds.",
   "tui.restart_required": "Restart TUI to apply language changes everywhere.",
   "tui.placeholder": "This first version wires the local-first safety workflow. CLI commands perform API operations.",
   "tui.keyword": "Keyword",

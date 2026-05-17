@@ -48,6 +48,7 @@ class NameSnipeApp(App[None]):
     .row { height: auto; margin-bottom: 1; }
     .warning { color: $warning; text-style: bold; }
     .hint { color: $text-muted; }
+    .status { padding: 1; border: solid $primary; margin-bottom: 1; }
     Input { margin-right: 1; }
     Button { margin-right: 1; }
     DataTable { height: 11; margin-top: 1; }
@@ -65,6 +66,7 @@ class NameSnipeApp(App[None]):
         self.config = config
         self.language_notice = Static("")
         self.runtime_log = Log(id="runtime-log")
+        self.status_text = Static(t("tui.start_here"), id="page-status", classes="status")
         self.search_results: list[SearchResult] = []
         self.check_results: list[DomainCheckResult] = []
         self.current_plan: PurchasePlan | None = None
@@ -72,6 +74,7 @@ class NameSnipeApp(App[None]):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         yield Static(self._safety_state(), id="safety-state", classes="topline")
+        yield self.status_text
         with TabbedContent(initial="dashboard", id="main-tabs"):
             with TabPane(t("nav.dashboard"), id="dashboard"):
                 yield self._dashboard()
@@ -133,6 +136,7 @@ class NameSnipeApp(App[None]):
 
     def _set_status(self, message: str) -> None:
         self.query_one("#safety-state", Static).update(f"{self._safety_state()} | {message}")
+        self.status_text.update(message)
         self._write_log(message)
 
     def _safety_state(self) -> str:
@@ -179,7 +183,7 @@ class NameSnipeApp(App[None]):
             ),
             Horizontal(
                 Checkbox(t("search.cheap_only"), id="search-cheap"),
-                Button(t("tui.run_search"), id="run-search", variant="primary"),
+                Button(t("tui.run_search"), id="run-search", variant="primary", disabled=False),
                 Button(t("tui.add_to_check"), id="add-search-to-check"),
                 classes="row",
             ),
@@ -337,6 +341,9 @@ class NameSnipeApp(App[None]):
         for item in self.search_results:
             price = "" if item.registration_price is None else str(item.registration_price)
             table.add_row(item.domain_name, price, item.currency, item.reason or "")
+        if not self.search_results:
+            self._set_status(t("search.no_results"))
+            return
         self._set_status(t("tui.search_done", count=len(self.search_results)))
 
     def _add_search_to_check(self) -> None:
@@ -367,6 +374,9 @@ class NameSnipeApp(App[None]):
                 else str(item.pricing.renewal_price)
             )
             table.add_row(item.domain_name, status, registration, renewal, item.reason or "")
+        if not self.check_results:
+            self._set_status(t("errors.no_domains"))
+            return
         self._set_status(t("tui.check_done", count=len(self.check_results)))
 
     def _create_plan(self) -> None:
@@ -418,6 +428,37 @@ class NameSnipeApp(App[None]):
             self._set_status(t("config.token_verify_failed", detail=detail))
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
+        button_id = event.button.id
+        if button_id in {
+            "verify-token",
+            "run-search",
+            "run-check",
+            "create-plan",
+            "load-plan",
+        }:
+            event.button.disabled = True
+            self._set_status(t("tui.working"))
+
+            def work() -> None:
+                try:
+                    if button_id == "verify-token":
+                        self._verify_token()
+                    elif button_id == "run-search":
+                        self._run_search()
+                    elif button_id == "run-check":
+                        self._run_check()
+                    elif button_id == "create-plan":
+                        self._create_plan()
+                    elif button_id == "load-plan":
+                        self._load_plan()
+                except Exception as exc:
+                    self.call_from_thread(self._set_status, f"{t('common.error')}: {exc}")
+                finally:
+                    self.call_from_thread(setattr, event.button, "disabled", False)
+
+            self.run_worker(work, thread=True, exclusive=False, exit_on_error=False)
+            return
+
         try:
             mapping = {"lang-en": "en", "lang-zh-CN": "zh-CN", "lang-ja-JP": "ja-JP"}
             if event.button.id in mapping:
@@ -430,17 +471,7 @@ class NameSnipeApp(App[None]):
                 self._write_log(t("tui.restart_required"))
             elif event.button.id == "save-config":
                 self._save_config_from_inputs()
-            elif event.button.id == "verify-token":
-                self._verify_token()
-            elif event.button.id == "run-search":
-                self._run_search()
             elif event.button.id == "add-search-to-check":
                 self._add_search_to_check()
-            elif event.button.id == "run-check":
-                self._run_check()
-            elif event.button.id == "create-plan":
-                self._create_plan()
-            elif event.button.id == "load-plan":
-                self._load_plan()
         except Exception as exc:
             self._set_status(f"{t('common.error')}: {exc}")
