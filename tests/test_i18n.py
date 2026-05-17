@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typer.main import get_command
 from typer.testing import CliRunner
 
 from namesnipe.cli import app
@@ -34,4 +35,7 @@ def test_cli_help_text_has_i18n_coverage_where_reasonable() -> None:
     result = CliRunner().invoke(app, ["search", "--help"])
     assert result.exit_code == 0
     assert "Search candidate domains." in result.stdout
-    assert "--lang" in result.stdout
+    command = get_command(app)
+    search = command.commands["search"]
+    option_names = {option for parameter in search.params for option in parameter.opts}
+    assert "--lang" in option_names
