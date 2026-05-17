@@ -19,6 +19,37 @@ from .security import redact_secret
 DEFAULT_BASE_URL = "https://api.cloudflare.com/client/v4"
 
 
+def verify_api_token(
+    api_token: str,
+    *,
+    base_url: str = DEFAULT_BASE_URL,
+    timeout: float = 20.0,
+    client: httpx.Client | None = None,
+) -> tuple[bool, str]:
+    http_client = client or httpx.Client(
+        base_url=base_url.rstrip("/"),
+        timeout=timeout,
+        headers={"Authorization": f"Bearer {api_token}"},
+    )
+    close_client = client is None
+    try:
+        response = http_client.get("/user/tokens/verify")
+        try:
+            payload = response.json()
+        except ValueError:
+            return False, f"HTTP {response.status_code}"
+        if payload.get("success") and not response.is_error:
+            result = payload.get("result", {})
+            status = result.get("status") if isinstance(result, dict) else None
+            return True, str(status or "active")
+        return False, _safe_error_detail(payload, response.status_code, api_token)
+    except httpx.HTTPError as exc:
+        return False, str(exc).replace(api_token, redact_secret(api_token))
+    finally:
+        if close_client:
+            http_client.close()
+
+
 class CloudflareRegistrarClient:
     def __init__(
         self,

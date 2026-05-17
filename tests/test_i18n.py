@@ -54,3 +54,21 @@ def test_help_command_outputs_command_table() -> None:
     assert result.exit_code == 0
     assert "NameSnipe help" in result.stdout
     assert "search" in result.stdout
+
+
+def test_root_command_defaults_to_tui(monkeypatch) -> None:
+    called = {}
+
+    class FakeApp:
+        def __init__(self, config) -> None:
+            called["config"] = config
+
+        def run(self) -> None:
+            called["run"] = True
+
+    import namesnipe.tui
+
+    monkeypatch.setattr(namesnipe.tui, "NameSnipeApp", FakeApp)
+    result = CliRunner().invoke(app, [], env={"NAMESNIPE_LANG": "en"})
+    assert result.exit_code == 0
+    assert called["run"] is True

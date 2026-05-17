@@ -61,6 +61,16 @@ uv pip install -e ".[dev]"
 
 ## Initialize
 
+The default app entry opens the TUI:
+
+```bash
+namesnipe
+```
+
+Use the Config tab to set Account ID, API Token, budgets, TLD allowlist, auto-renew, dry-run, and language. The Config tab also has a **Test token** action that calls Cloudflare's `/user/tokens/verify` endpoint without printing the token.
+
+The older guided terminal initializer is still available:
+
 ```bash
 namesnipe init
 ```
@@ -152,6 +162,7 @@ namesnipe status birditch.link
 Open the Textual interface:
 
 ```bash
+namesnipe
 namesnipe tui
 ```
 
@@ -165,7 +176,7 @@ The TUI includes:
 - Config
 - Logs
 
-The first version keeps Cloudflare operations in the CLI workflow while exposing safety state and configuration in the TUI. Live purchase areas show explicit warnings and confirmation requirements.
+The TUI can save local JSON config, test the Cloudflare token, search candidates, import results into check, run real-time checks, and create a local plan. Live purchase remains a deliberate CLI action so billable registration still requires `--live` and an exact confirmation phrase.
 
 ## Cloudflare API Token
 
@@ -177,6 +188,8 @@ Create a Cloudflare API token with the minimum Registrar permissions required by
 - Registrar registration status
 
 Do not use a broader token unless your Cloudflare account policy requires it. NameSnipe never prints the token and redacts secrets in error handling.
+
+In the TUI Config tab, use **Test token** after pasting the token. A valid token returns a Cloudflare verification status such as `active`.
 
 ## Internationalization
 
@@ -242,7 +255,7 @@ ruff format .
 
 ## Roadmap
 
-- Fully interactive TUI search/check/plan flow.
+- More complete TUI live-purchase review flow while keeping billable registration confirmation explicit.
 - Import/export candidate lists.
 - Optional local history without sensitive data.
 - More Registrar status detail.

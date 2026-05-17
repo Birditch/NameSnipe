@@ -9,7 +9,7 @@ from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
 from rich.table import Table
 
-from .cloudflare import CloudflareRegistrarClient
+from .cloudflare import CloudflareRegistrarClient, verify_api_token
 from .config import load_config, save_config
 from .errors import NameSnipeError
 from .i18n import resolve_language, set_language, t
@@ -35,7 +35,7 @@ class NameSnipeTyper(typer.Typer):
             raise typer.Exit(1) from exc
 
 
-app = NameSnipeTyper(help=t("app.subtitle"), no_args_is_help=True)
+app = NameSnipeTyper(help=t("app.subtitle"), no_args_is_help=False, invoke_without_command=True)
 COMMAND_HELP_KEYS = {
     "init": "cli.init.help",
     "search": "cli.search.help",
@@ -91,6 +91,19 @@ def _domain_inputs(domains: list[str], file: Path | None) -> list[str]:
 def _print_init_explanation(key: str, **kwargs: object) -> None:
     console.print()
     console.print(f"[dim]{t(key, **kwargs)}[/dim]")
+
+
+@app.callback(invoke_without_command=True)
+def root_command(
+    ctx: typer.Context,
+    lang: Annotated[str | None, _language_option()] = None,
+) -> None:
+    if ctx.invoked_subcommand is not None:
+        return
+    config = _load_configured_language(lang)
+    from .tui import NameSnipeApp
+
+    NameSnipeApp(config).run()
 
 
 @app.command("help", help=t("cli.help.help"))
@@ -166,6 +179,11 @@ def init_command(
     if token:
         set_api_token(token)
         console.print(t("config.token_saved_local_json", path=path))
+        ok, detail = verify_api_token(token)
+        if ok:
+            console.print(t("config.token_verify_success", detail=detail))
+        else:
+            console.print(t("config.token_verify_failed", detail=detail))
     console.print(t("config.saved", path=path))
 
 

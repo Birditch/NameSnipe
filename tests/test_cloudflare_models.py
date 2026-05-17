@@ -4,7 +4,7 @@ from decimal import Decimal
 
 import httpx
 
-from namesnipe.cloudflare import CloudflareRegistrarClient
+from namesnipe.cloudflare import CloudflareRegistrarClient, verify_api_token
 
 
 class FakeHTTPClient:
@@ -80,3 +80,10 @@ def test_cloudflare_register_accepted_is_not_retried() -> None:
     registration_posts = [path for path, _payload in fake.posts if path.endswith("registrations")]
     assert result.status == "accepted"
     assert registration_posts == ["/accounts/account/registrar/registrations"]
+
+
+def test_verify_api_token_uses_cloudflare_verify_endpoint() -> None:
+    fake = FakeHTTPClient()
+    ok, detail = verify_api_token("token", client=fake)  # type: ignore[arg-type]
+    assert ok is True
+    assert detail == "pending"
