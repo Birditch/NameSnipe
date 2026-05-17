@@ -38,6 +38,22 @@ def reject_premium_domains(results: Iterable[DomainCheckResult]) -> None:
         raise SecurityError(t("errors.premium_rejected", domains=", ".join(premium)))
 
 
+def domain_tld(domain_name: str) -> str:
+    return domain_name.rsplit(".", 1)[-1].lower() if "." in domain_name else ""
+
+
+def reject_ignored_tlds(
+    results: Iterable[DomainCheckResult],
+    ignored_tlds: Iterable[str],
+) -> None:
+    ignored = {item.strip().lower().lstrip(".") for item in ignored_tlds if item.strip()}
+    if not ignored:
+        return
+    blocked = [item.domain_name for item in results if domain_tld(item.domain_name) in ignored]
+    if blocked:
+        raise SecurityError(t("errors.ignored_tld", domains=", ".join(blocked)))
+
+
 def validate_budget(
     results: Iterable[DomainCheckResult],
     max_price_usd: Decimal,

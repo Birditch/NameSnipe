@@ -22,7 +22,7 @@ from .renderer import (
     render_registration_results,
     render_search_results,
 )
-from .security import assert_live_purchase_allowed
+from .security import assert_live_purchase_allowed, reject_ignored_tlds
 from .storage import config_path, get_api_token, latest_plan_path, set_api_token
 
 
@@ -46,6 +46,7 @@ COMMAND_HELP_KEYS = {
     "tui": "cli.tui.help",
     "help": "cli.help.help",
 }
+DEFAULT_SEARCH_TLDS = ["link", "cc", "xyz", "icu", "dev", "app", "com"]
 
 
 def _language_option() -> str | None:
@@ -86,6 +87,20 @@ def _domain_inputs(domains: list[str], file: Path | None) -> list[str]:
     if not unique:
         raise NameSnipeError(t("errors.no_domains"))
     return unique
+
+
+def _parse_tld_csv(value: str) -> list[str]:
+    unique: list[str] = []
+    for item in value.split(","):
+        tld = item.strip().lower().lstrip(".")
+        if tld and tld not in unique:
+            unique.append(tld)
+    return unique
+
+
+def _remove_ignored_tlds(tlds: list[str], ignored_tlds: list[str]) -> list[str]:
+    ignored = {item.strip().lower().lstrip(".") for item in ignored_tlds if item.strip()}
+    return [item for item in tlds if item not in ignored]
 
 
 def _print_init_explanation(key: str, **kwargs: object) -> None:
@@ -146,7 +161,7 @@ def init_command(
     account_id = Prompt.ask(t("config.account_id"))
 
     _print_init_explanation("init.explain.api_token", path=config_path())
-    token = Prompt.ask(t("config.api_token"), password=True)
+    token = Prompt.ask(t("config.api_token"))
 
     _print_init_explanation("init.explain.max_price")
     max_price = Decimal(Prompt.ask(t("config.max_price_usd"), default="10.00"))
@@ -154,8 +169,8 @@ def init_command(
     _print_init_explanation("init.explain.max_total")
     max_total = Decimal(Prompt.ask(t("config.max_total_usd"), default="50.00"))
 
-    _print_init_explanation("init.explain.tld_allowlist")
-    tlds = Prompt.ask(t("config.tld_allowlist"), default="link,cc,xyz,icu,dev,app,com")
+    _print_init_explanation("init.explain.tld_ignorelist")
+    ignored_tlds = Prompt.ask(t("config.tld_ignorelist"), default="")
 
     _print_init_explanation("init.explain.auto_renew")
     auto_renew = Confirm.ask(t("config.auto_renew"), default=False)
@@ -170,7 +185,7 @@ def init_command(
         account_id=account_id,
         max_price_usd=max_price,
         max_total_usd=max_total,
-        tld_allowlist=[item.strip() for item in tlds.split(",")],
+        tld_ignorelist=_parse_tld_csv(ignored_tlds),
         auto_renew=auto_renew,
         dry_run=dry_run,
         ui={"language": selected_language},
@@ -193,7 +208,7 @@ def search_command(
     tlds: Annotated[
         str,
         typer.Option("--tlds", help=t("cli.tlds.help")),
-    ] = "link,cc,xyz,icu,dev,app,com",
+    ] = ",".join(DEFAULT_SEARCH_TLDS),
     limit: Annotated[int, typer.Option("--limit", min=1, max=100, help=t("cli.limit.help"))] = 20,
     cheap: Annotated[bool, typer.Option("--cheap", help=t("cli.cheap.help"))] = False,
     max_price: Annotated[
@@ -203,10 +218,13 @@ def search_command(
     lang: Annotated[str | None, _language_option()] = None,
 ) -> None:
     config = _load_configured_language(lang)
+    search_tlds = _remove_ignored_tlds(_parse_tld_csv(tlds), config.tld_ignorelist)
+    if not search_tlds:
+        raise NameSnipeError(t("errors.all_tlds_ignored"))
     with _client(config) as client:
         results = client.search_domains(
             keyword,
-            tlds=[item.strip().lower() for item in tlds.split(",") if item.strip()],
+            tlds=search_tlds,
             limit=limit,
             cheap=cheap,
             max_price=Decimal(max_price) if max_price is not None else None,
@@ -298,6 +316,7 @@ def buy_command(
     with _client(config) as client:
         fresh_results = client.check_domains([item.domain_name for item in purchase_plan.domains])
         phrase = Prompt.ask(t("buy.enter_phrase"))
+        reject_ignored_tlds(fresh_results, config.tld_ignorelist)
         assert_live_purchase_allowed(purchase_plan, fresh_results, phrase)
         results = [
             client.register_domain(

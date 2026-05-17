@@ -16,6 +16,7 @@ from textual.widgets import (
     Label,
     Log,
     Static,
+    Switch,
     TabbedContent,
     TabPane,
     TextArea,
@@ -38,6 +39,7 @@ NAV_KEYS = [
     "nav.config",
     "nav.logs",
 ]
+DEFAULT_SEARCH_TLDS = ["link", "cc", "xyz", "icu", "dev", "app", "com"]
 
 
 class NameSnipeApp(App[None]):
@@ -49,7 +51,10 @@ class NameSnipeApp(App[None]):
     .warning { color: $warning; text-style: bold; }
     .hint { color: $text-muted; }
     .status { padding: 1; border: solid $primary; margin-bottom: 1; }
+    .switch-label { width: 26; }
+    .switch-state { width: 12; color: $text-muted; }
     Input { margin-right: 1; }
+    Switch { margin-right: 1; }
     Button { margin-right: 1; }
     DataTable { height: 11; margin-top: 1; }
     TextArea { height: 8; }
@@ -174,8 +179,8 @@ class NameSnipeApp(App[None]):
             Horizontal(
                 Input(placeholder=t("tui.keyword"), id="search-keyword"),
                 Input(
-                    value=",".join(self.config.tld_allowlist),
-                    placeholder=t("config.tld_allowlist"),
+                    value=",".join(self._remove_ignored_tlds(DEFAULT_SEARCH_TLDS)),
+                    placeholder=t("search.tlds_to_search"),
                     id="search-tlds",
                 ),
                 Input(value="20", placeholder=t("tui.limit"), id="search-limit"),
@@ -252,7 +257,11 @@ class NameSnipeApp(App[None]):
                 placeholder=t("config.account_id"),
                 id="cfg-account",
             ),
-            Input(placeholder=t("config.api_token"), id="cfg-token", password=True),
+            Input(
+                value=get_api_token() or "",
+                placeholder=t("config.api_token"),
+                id="cfg-token",
+            ),
             Horizontal(
                 Input(
                     value=str(self.config.max_price_usd),
@@ -267,13 +276,24 @@ class NameSnipeApp(App[None]):
                 classes="row",
             ),
             Input(
-                value=",".join(self.config.tld_allowlist),
-                placeholder=t("config.tld_allowlist"),
+                value=",".join(self.config.tld_ignorelist),
+                placeholder=t("config.tld_ignorelist"),
                 id="cfg-tlds",
             ),
             Horizontal(
-                Checkbox(t("config.auto_renew"), value=self.config.auto_renew, id="cfg-auto-renew"),
-                Checkbox(t("config.dry_run"), value=True, id="cfg-dry-run"),
+                Label(t("config.auto_renew"), classes="switch-label"),
+                Switch(value=self.config.auto_renew, id="cfg-auto-renew"),
+                Label(
+                    self._switch_text(self.config.auto_renew),
+                    id="cfg-auto-renew-state",
+                    classes="switch-state",
+                ),
+                classes="row",
+            ),
+            Horizontal(
+                Label(t("config.dry_run"), classes="switch-label"),
+                Switch(value=True, id="cfg-dry-run", disabled=True),
+                Label(t("tui.switch_on"), id="cfg-dry-run-state", classes="switch-state"),
                 classes="row",
             ),
             Horizontal(
@@ -292,6 +312,21 @@ class NameSnipeApp(App[None]):
     def _logs(self) -> Container:
         return Container(Label(t("tui.no_token_logged")), self.runtime_log, classes="pane")
 
+    def _switch_text(self, value: bool) -> str:
+        return t("tui.switch_on") if value else t("tui.switch_off")
+
+    def _parse_tld_csv(self, value: str) -> list[str]:
+        unique: list[str] = []
+        for item in value.split(","):
+            tld = item.strip().lower().lstrip(".")
+            if tld and tld not in unique:
+                unique.append(tld)
+        return unique
+
+    def _remove_ignored_tlds(self, tlds: list[str]) -> list[str]:
+        ignored = {item.strip().lower().lstrip(".") for item in self.config.tld_ignorelist}
+        return [item for item in tlds if item not in ignored]
+
     def _read_check_domains(self) -> list[str]:
         text = self.query_one("#check-domains", TextArea).text
         raw = text.replace(",", "\n").splitlines()
@@ -304,12 +339,8 @@ class NameSnipeApp(App[None]):
         self.config.account_id = self.query_one("#cfg-account", Input).value.strip() or None
         self.config.max_price_usd = Decimal(self.query_one("#cfg-max-price", Input).value.strip())
         self.config.max_total_usd = Decimal(self.query_one("#cfg-max-total", Input).value.strip())
-        self.config.tld_allowlist = [
-            item.strip().lower().lstrip(".")
-            for item in self.query_one("#cfg-tlds", Input).value.split(",")
-            if item.strip()
-        ]
-        self.config.auto_renew = self.query_one("#cfg-auto-renew", Checkbox).value
+        self.config.tld_ignorelist = self._parse_tld_csv(self.query_one("#cfg-tlds", Input).value)
+        self.config.auto_renew = self.query_one("#cfg-auto-renew", Switch).value
         self.config.dry_run = True
         token = self.query_one("#cfg-token", Input).value.strip()
         path = save_config(self.config)
@@ -322,11 +353,11 @@ class NameSnipeApp(App[None]):
         keyword = self.query_one("#search-keyword", Input).value.strip()
         if not keyword:
             raise NameSnipeError(t("errors.no_domains"))
-        tlds = [
-            item.strip().lower().lstrip(".")
-            for item in self.query_one("#search-tlds", Input).value.split(",")
-            if item.strip()
-        ]
+        tlds = self._remove_ignored_tlds(
+            self._parse_tld_csv(self.query_one("#search-tlds", Input).value)
+        )
+        if not tlds:
+            raise NameSnipeError(t("errors.all_tlds_ignored"))
         limit = int(self.query_one("#search-limit", Input).value or "20")
         cheap = self.query_one("#search-cheap", Checkbox).value
         with self._client() as client:
@@ -475,3 +506,7 @@ class NameSnipeApp(App[None]):
                 self._add_search_to_check()
         except Exception as exc:
             self._set_status(f"{t('common.error')}: {exc}")
+
+    def on_switch_changed(self, event: Switch.Changed) -> None:
+        if event.switch.id == "cfg-auto-renew":
+            self.query_one("#cfg-auto-renew-state", Label).update(self._switch_text(event.value))

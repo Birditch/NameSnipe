@@ -7,6 +7,7 @@ from .i18n import t
 from .models import AppConfig, DomainCheckResult, PurchasePlan, PurchasePlanItem, SearchResult
 from .security import (
     build_confirm_phrase,
+    reject_ignored_tlds,
     reject_premium_domains,
     require_recent_check,
     validate_budget,
@@ -27,6 +28,7 @@ def create_purchase_plan(
         raise SecurityError(t("errors.no_domains"))
 
     require_recent_check(results)
+    reject_ignored_tlds(results, config.tld_ignorelist)
     reject_premium_domains(results)
 
     rejected = [

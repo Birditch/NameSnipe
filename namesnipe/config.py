@@ -18,6 +18,7 @@ def load_config(path: Path | None = None) -> AppConfig:
     data: dict[str, Any] = dict(raw)
     for key in SENSITIVE_CONFIG_KEYS:
         data.pop(key, None)
+    data.pop("tld_allowlist", None)
     ui = data.pop("ui", {})
     return AppConfig(**data, ui=ui)
 

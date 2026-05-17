@@ -20,7 +20,7 @@ def test_all_non_english_catalogs_have_required_safety_keys() -> None:
         "init.explain.api_token",
         "init.explain.max_price",
         "init.explain.max_total",
-        "init.explain.tld_allowlist",
+        "init.explain.tld_ignorelist",
         "init.explain.auto_renew",
         "init.explain.dry_run",
     }

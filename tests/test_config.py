@@ -68,6 +68,20 @@ def test_config_decimal_round_trip(tmp_path) -> None:
     assert loaded.max_total_usd == Decimal("56.78")
 
 
+def test_tld_ignorelist_round_trip(tmp_path) -> None:
+    path = tmp_path / "namesnipe-config.json"
+    save_config(AppConfig(tld_ignorelist=[".zip", "MOV", "zip"]), path)
+    loaded = load_config(path)
+    assert loaded.tld_ignorelist == ["zip", "mov"]
+    assert '"tld_ignorelist"' in path.read_text(encoding="utf-8")
+
+
+def test_legacy_tld_allowlist_is_not_treated_as_ignorelist(tmp_path) -> None:
+    path = tmp_path / "namesnipe-config.json"
+    path.write_text('{"tld_allowlist": ["com", "link"]}', encoding="utf-8")
+    assert load_config(path).tld_ignorelist == []
+
+
 def test_config_path_is_run_directory_json(tmp_path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     assert config_path() == tmp_path / "namesnipe-config.json"

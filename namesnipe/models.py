@@ -19,19 +19,22 @@ class AppConfig(BaseModel):
     account_id: str | None = None
     max_price_usd: Decimal = Decimal("10.00")
     max_total_usd: Decimal = Decimal("50.00")
-    tld_allowlist: list[str] = Field(
-        default_factory=lambda: ["link", "cc", "xyz", "icu", "dev", "app", "com"]
-    )
+    tld_ignorelist: list[str] = Field(default_factory=list)
     auto_renew: bool = False
     dry_run: bool = True
     privacy_mode: Literal["redaction", "none"] = "redaction"
     years: int = Field(default=1, ge=1, le=10)
     ui: UIConfig = Field(default_factory=UIConfig)
 
-    @field_validator("tld_allowlist")
+    @field_validator("tld_ignorelist")
     @classmethod
     def normalize_tlds(cls, value: list[str]) -> list[str]:
-        return [item.strip().lower().lstrip(".") for item in value if item.strip()]
+        normalized: list[str] = []
+        for item in value:
+            tld = item.strip().lower().lstrip(".")
+            if tld and tld not in normalized:
+                normalized.append(tld)
+        return normalized
 
 
 class SearchResult(BaseModel):

@@ -27,6 +27,18 @@ def test_plan_rejects_unsupported_tld() -> None:
         create_purchase_plan(config, [result])
 
 
+def test_plan_rejects_ignored_tld() -> None:
+    config = AppConfig(tld_ignorelist=["zip"])
+    result = DomainCheckResult(
+        domain_name="example.zip",
+        available=True,
+        supported=True,
+        pricing=DomainPricing(registration_price=Decimal("7.20"), renewal_price=Decimal("7.20")),
+    )
+    with pytest.raises(SecurityError):
+        create_purchase_plan(config, [result])
+
+
 def test_plan_created_from_checked_buyable_domains() -> None:
     config = AppConfig(max_price_usd=Decimal("10.00"), max_total_usd=Decimal("50.00"))
     result = DomainCheckResult(

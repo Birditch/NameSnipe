@@ -27,10 +27,11 @@ Domain search tools often mix discovery, pricing, and purchase into one flow. Na
 - Price is re-checked immediately before live registration.
 - Premium domains are rejected by default.
 - Unsupported TLDs are rejected.
+- User-configured ignored domain suffixes are filtered before planning.
 - Domains above budget are rejected.
 - Batch totals above budget are rejected.
 - Billable registration is never retried blindly, including `202 Accepted` responses.
-- Cloudflare API settings are stored in `./namesnipe-config.json` in the directory where you run NameSnipe. The file is ignored by git by default and token values are never printed.
+- Cloudflare API settings are stored in `./namesnipe-config.json` in the directory where you run NameSnipe. The file is ignored by git by default. The TUI Config tab can show the local token for convenience, but logs and errors still avoid printing tokens.
 
 NameSnipe is local-first and safe by default in every language.
 
@@ -67,7 +68,7 @@ The default app entry opens the TUI:
 namesnipe
 ```
 
-Use the Config tab to set Account ID, API Token, budgets, TLD allowlist, auto-renew, dry-run, and language. The Config tab also has a **Test token** action that calls Cloudflare's `/user/tokens/verify` endpoint without printing the token.
+Use the Config tab to set Account ID, API Token, budgets, ignored domain suffixes, auto-renew, dry-run, and language. The Config tab also has a **Test token** action that calls Cloudflare's `/user/tokens/verify` endpoint without logging the token.
 
 The older guided terminal initializer is still available:
 
@@ -81,7 +82,7 @@ The initializer asks for:
 - Cloudflare API Token
 - per-domain budget
 - batch budget
-- default TLD allowlist
+- ignored domain suffixes
 - auto-renew default
 - dry-run default
 - UI language
@@ -95,7 +96,7 @@ Example shape:
   "account_id": "your-cloudflare-account-id",
   "max_price_usd": "10.00",
   "max_total_usd": "50.00",
-  "tld_allowlist": ["link", "cc", "xyz", "icu", "dev", "app", "com"],
+  "tld_ignorelist": ["zip", "mov"],
   "auto_renew": false,
   "dry_run": true,
   "privacy_mode": "redaction",
@@ -120,6 +121,8 @@ Search candidates:
 ```bash
 namesnipe search birditch --tlds link,cc,xyz,dev,app,com --limit 20 --cheap --max-price 10
 ```
+
+`--tlds` means “TLDs to search for this run”. The configured `tld_ignorelist` is a separate safety filter; if you ignore `zip`, NameSnipe will filter `.zip` out even when it appears in a search list or a plan input.
 
 Search results are not authoritative. Always check before planning:
 
@@ -187,7 +190,7 @@ Create a Cloudflare API token with the minimum Registrar permissions required by
 - Registrar registrations
 - Registrar registration status
 
-Do not use a broader token unless your Cloudflare account policy requires it. NameSnipe never prints the token and redacts secrets in error handling.
+Do not use a broader token unless your Cloudflare account policy requires it. NameSnipe can display the token in the local TUI Config field because the config is local JSON, but it still avoids logging tokens and redacts secrets in error handling.
 
 In the TUI Config tab, use **Test token** after pasting the token. A valid token returns a Cloudflare verification status such as `active`.
 
