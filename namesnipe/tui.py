@@ -28,6 +28,7 @@ from .errors import NameSnipeError
 from .i18n import get_language, set_language, t
 from .models import AppConfig, DomainCheckResult, PurchasePlan, SearchResult
 from .planner import create_purchase_plan
+from .security import assert_live_purchase_allowed, reject_ignored_tlds
 from .storage import get_api_token, latest_plan_path, set_api_token
 
 NAV_KEYS = [
@@ -135,6 +136,11 @@ class NameSnipeApp(App[None]):
             t("common.price"),
             t("common.currency"),
         )
+        self.query_one("#buy-results", DataTable).add_columns(
+            t("common.domain"),
+            t("common.status"),
+            t("common.reason"),
+        )
 
     def _write_log(self, message: str) -> None:
         self.runtime_log.write_line(message)
@@ -215,14 +221,10 @@ class NameSnipeApp(App[None]):
             Label(t("tui.plan_help"), classes="hint"),
             Label(t("security.recheck_before_buy"), classes="warning"),
             Horizontal(
-                Input(
-                    value=str(latest_plan_path()),
-                    placeholder=t("cli.output.help"),
-                    id="plan-path",
-                ),
                 Button(t("tui.create_plan"), id="create-plan", variant="primary"),
                 classes="row",
             ),
+            Label(t("tui.plan_output", path=latest_plan_path()), id="plan-path-label"),
             DataTable(id="plan-items"),
             Label(f"{t('plan.estimated_total')}: -", id="plan-total"),
             Label(f"{t('plan.confirm_phrase')}: -", id="plan-phrase"),
@@ -235,16 +237,22 @@ class NameSnipeApp(App[None]):
             Label(t("security.live_purchase_warning"), classes="warning"),
             Label(t("security.confirm_phrase_required")),
             Horizontal(
-                Input(
-                    value=str(latest_plan_path()),
-                    placeholder=t("cli.plan_file.help"),
-                    id="buy-plan",
-                ),
                 Button(t("tui.load_plan"), id="load-plan"),
+                Button(t("tui.execute_buy"), id="execute-buy", variant="primary"),
                 classes="row",
             ),
+            Horizontal(
+                Label(t("tui.live_purchase"), classes="switch-label"),
+                Switch(value=False, id="buy-live"),
+                Label(t("tui.switch_off"), id="buy-live-state", classes="switch-state"),
+                classes="row",
+            ),
+            Input(placeholder=t("buy.enter_phrase"), id="buy-confirm-phrase"),
+            Label(t("tui.plan_source", path=latest_plan_path()), id="buy-plan-source"),
             Label(t("buy.dry_run_only"), id="buy-summary"),
-            Label("", id="buy-command"),
+            Label(f"{t('plan.confirm_phrase')}: -", id="buy-phrase"),
+            Label(t("tui.buy_no_charge_until_live"), classes="hint"),
+            DataTable(id="buy-results"),
             classes="pane",
         )
 
@@ -415,28 +423,40 @@ class NameSnipeApp(App[None]):
         with self._client() as client:
             self.check_results = client.check_domains(domains)
         self.current_plan = create_purchase_plan(self.config, self.check_results)
-        output = Path(self.query_one("#plan-path", Input).value or str(latest_plan_path()))
+        output = latest_plan_path()
         output.write_text(self.current_plan.model_dump_json(indent=2), encoding="utf-8")
+        self._update_plan_view(self.current_plan, output)
+        self._update_buy_plan_view(self.current_plan, output)
+        self._set_status(t("plan.created", path=output))
+
+    def _update_plan_view(self, plan: PurchasePlan, output: Path) -> None:
+        self.query_one("#plan-path-label", Label).update(t("tui.plan_output", path=output))
         table = self.query_one("#plan-items", DataTable)
         table.clear()
-        for item in self.current_plan.domains:
+        for item in plan.domains:
             table.add_row(
                 item.domain_name,
                 str(item.pricing.registration_price),
                 item.pricing.currency,
             )
         self.query_one("#plan-total", Label).update(
-            f"{t('plan.estimated_total')}: "
-            f"{self.current_plan.estimated_total} {self.current_plan.currency}"
+            f"{t('plan.estimated_total')}: {plan.estimated_total} {plan.currency}"
         )
         self.query_one("#plan-phrase", Label).update(
-            f"{t('plan.confirm_phrase')}: {self.current_plan.confirm_phrase}"
+            f"{t('plan.confirm_phrase')}: {plan.confirm_phrase}"
         )
-        self._set_status(t("plan.created", path=output))
 
-    def _load_plan(self) -> None:
-        path = Path(self.query_one("#buy-plan", Input).value or str(latest_plan_path()))
-        plan = PurchasePlan.model_validate_json(path.read_text(encoding="utf-8"))
+    def _plan_for_buy(self) -> tuple[PurchasePlan, Path]:
+        path = latest_plan_path()
+        if self.current_plan is not None:
+            return self.current_plan, path
+        if not path.exists():
+            raise NameSnipeError(t("errors.plan_missing", path=path))
+        self.current_plan = PurchasePlan.model_validate_json(path.read_text(encoding="utf-8"))
+        return self.current_plan, path
+
+    def _update_buy_plan_view(self, plan: PurchasePlan, path: Path) -> None:
+        self.query_one("#buy-plan-source", Label).update(t("tui.plan_source", path=path))
         self.query_one("#buy-summary", Label).update(
             t(
                 "buy.confirm_intro",
@@ -445,8 +465,53 @@ class NameSnipeApp(App[None]):
                 currency=plan.currency,
             )
         )
-        self.query_one("#buy-command", Label).update(t("tui.buy_cli_command", path=path))
+        self.query_one("#buy-phrase", Label).update(
+            f"{t('plan.confirm_phrase')}: {plan.confirm_phrase}"
+        )
+        self.query_one("#buy-confirm-phrase", Input).value = ""
+        self.query_one("#buy-results", DataTable).clear()
+
+    def _load_plan(self) -> None:
+        plan, path = self._plan_for_buy()
+        self._update_buy_plan_view(plan, path)
         self._set_status(t("tui.plan_loaded", path=path))
+
+    def _execute_buy(self) -> None:
+        plan, path = self._plan_for_buy()
+        self._update_buy_plan_view(plan, path)
+        live = self.query_one("#buy-live", Switch).value
+        results_table = self.query_one("#buy-results", DataTable)
+        results_table.clear()
+        if not live:
+            for item in plan.domains:
+                results_table.add_row(item.domain_name, "dry_run", t("buy.dry_run_only"))
+            self._set_status(t("buy.dry_run_only"))
+            return
+
+        phrase = self.query_one("#buy-confirm-phrase", Input).value
+        with self._client() as client:
+            fresh_results = client.check_domains([item.domain_name for item in plan.domains])
+            reject_ignored_tlds(fresh_results, self.config.tld_ignorelist)
+            assert_live_purchase_allowed(plan, fresh_results, phrase)
+            results = [
+                client.register_domain(
+                    item.domain_name,
+                    years=plan.years,
+                    auto_renew=plan.auto_renew,
+                    privacy_mode=plan.privacy_mode,
+                )
+                for item in plan.domains
+            ]
+        for result in results:
+            results_table.add_row(result.domain_name, result.status, result.message or "")
+            if result.status == "accepted":
+                result_path = Path(f"namesnipe-result-{result.domain_name}.json")
+                result_path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
+                self._write_log(t("buy.result_written", path=result_path))
+        if any(result.status == "accepted" for result in results):
+            self._set_status(t("buy.status_accepted"))
+        else:
+            self._set_status(t("buy.status_succeeded"))
 
     def _verify_token(self) -> None:
         token = self.query_one("#cfg-token", Input).value.strip() or get_api_token()
@@ -466,6 +531,7 @@ class NameSnipeApp(App[None]):
             "run-check",
             "create-plan",
             "load-plan",
+            "execute-buy",
         }:
             event.button.disabled = True
             self._set_status(t("tui.working"))
@@ -482,6 +548,8 @@ class NameSnipeApp(App[None]):
                         self._create_plan()
                     elif button_id == "load-plan":
                         self._load_plan()
+                    elif button_id == "execute-buy":
+                        self._execute_buy()
                 except Exception as exc:
                     self.call_from_thread(self._set_status, f"{t('common.error')}: {exc}")
                 finally:
@@ -510,3 +578,5 @@ class NameSnipeApp(App[None]):
     def on_switch_changed(self, event: Switch.Changed) -> None:
         if event.switch.id == "cfg-auto-renew":
             self.query_one("#cfg-auto-renew-state", Label).update(self._switch_text(event.value))
+        elif event.switch.id == "buy-live":
+            self.query_one("#buy-live-state", Label).update(self._switch_text(event.value))

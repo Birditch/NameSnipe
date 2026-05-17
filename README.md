@@ -179,7 +179,7 @@ The TUI includes:
 - Config
 - Logs
 
-The TUI can save local JSON config, test the Cloudflare token, search candidates, import results into check, run real-time checks, and create a local plan. Live purchase remains a deliberate CLI action so billable registration still requires `--live` and an exact confirmation phrase.
+The TUI can save local JSON config, test the Cloudflare token, search candidates, import results into check, run real-time checks, create a local plan, run dry-run purchase checks, and execute a live purchase only after the live switch is enabled and the exact confirmation phrase is entered.
 
 ## Cloudflare API Token
 
