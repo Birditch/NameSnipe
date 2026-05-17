@@ -1,0 +1,69 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "namesnipe"
+version = "0.1.0"
+description = "A safe local-first Python TUI/CLI for searching, checking, and registering domains through Cloudflare Registrar API."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "NameSnipe Contributors" }]
+keywords = ["cloudflare", "domain", "registrar", "tui", "cli", "textual", "typer"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Internet :: Name Service (DNS)",
+  "Topic :: Terminals",
+]
+dependencies = [
+  "httpx>=0.27",
+  "keyring>=25.0",
+  "platformdirs>=4.2",
+  "pydantic>=2.7",
+  "rich>=13.7",
+  "textual>=0.79",
+  "typer>=0.12",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2",
+  "ruff>=0.6",
+]
+
+[project.scripts]
+namesnipe = "namesnipe.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["namesnipe"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "namesnipe",
+  "tests",
+  "README.md",
+  "LICENSE",
+  ".env.example",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "RUF"]
+ignore = ["B008"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

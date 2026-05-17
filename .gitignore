@@ -1,0 +1,17 @@
+.DS_Store
+AGENTS.md
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+dist/
+build/
+*.egg-info/
+namesnipe-plan.json
+namesnipe-result-*.json
