@@ -16,6 +16,13 @@ def test_all_non_english_catalogs_have_required_safety_keys() -> None:
         "errors.token_missing",
         "errors.premium_rejected",
         "buy.price_changed_abort",
+        "init.explain.account_id",
+        "init.explain.api_token",
+        "init.explain.max_price",
+        "init.explain.max_total",
+        "init.explain.tld_allowlist",
+        "init.explain.auto_renew",
+        "init.explain.dry_run",
     }
     for language in ("zh-CN", "ja-JP"):
         assert required <= catalog_keys(language)

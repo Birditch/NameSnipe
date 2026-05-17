@@ -22,7 +22,7 @@ from .renderer import (
     render_search_results,
 )
 from .security import assert_live_purchase_allowed
-from .storage import get_api_token, latest_plan_path, set_api_token
+from .storage import config_path, get_api_token, latest_plan_path, set_api_token
 
 
 class NameSnipeTyper(typer.Typer):
@@ -77,6 +77,11 @@ def _domain_inputs(domains: list[str], file: Path | None) -> list[str]:
     return unique
 
 
+def _print_init_explanation(key: str, **kwargs: object) -> None:
+    console.print()
+    console.print(f"[dim]{t(key, **kwargs)}[/dim]")
+
+
 @app.command("init", help=t("cli.init.help"))
 def init_command(
     lang: Annotated[str | None, _language_option()] = None,
@@ -91,12 +96,25 @@ def init_command(
     selected_language = {"1": "en", "2": "zh-CN", "3": "ja-JP"}[choice]
     set_language(selected_language)
 
+    _print_init_explanation("init.explain.account_id")
     account_id = Prompt.ask(t("config.account_id"))
+
+    _print_init_explanation("init.explain.api_token", path=config_path())
     token = Prompt.ask(t("config.api_token"), password=True)
+
+    _print_init_explanation("init.explain.max_price")
     max_price = Decimal(Prompt.ask(t("config.max_price_usd"), default="10.00"))
+
+    _print_init_explanation("init.explain.max_total")
     max_total = Decimal(Prompt.ask(t("config.max_total_usd"), default="50.00"))
+
+    _print_init_explanation("init.explain.tld_allowlist")
     tlds = Prompt.ask(t("config.tld_allowlist"), default="link,cc,xyz,icu,dev,app,com")
+
+    _print_init_explanation("init.explain.auto_renew")
     auto_renew = Confirm.ask(t("config.auto_renew"), default=False)
+
+    _print_init_explanation("init.explain.dry_run")
     dry_run = Confirm.ask(t("config.dry_run"), default=True)
     if not dry_run:
         console.print(Panel(t("security.dry_run_enabled"), title=t("common.warning")))
