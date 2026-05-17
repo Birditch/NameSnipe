@@ -69,7 +69,7 @@
   "config.token_present": "API Token 已存在",
   "config.token_missing": "API Token 缺失",
   "init.explain.account_id": "Cloudflare Account ID 用来告诉 NameSnipe 操作哪个 Cloudflare 账户。官方说明：https://developers.cloudflare.com/fundamentals/setup/find-account-and-zone-ids/ Dashboard：https://dash.cloudflare.com/",
-  "init.explain.api_token": "Cloudflare API Token 是本地调用 Registrar API 的凭证。请到 Cloudflare Dashboard > My Profile > API Tokens 创建。官方说明：https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ Dashboard：https://dash.cloudflare.com/profile/api-tokens 它只会保存到这个本地 JSON 文件：{path}",
+  "init.explain.api_token": "Cloudflare API Token 是本地调用 Registrar API 的凭证。使用条件：这个 Cloudflare 账户必须有 Registrar API 访问能力；Token 需要 Registrar write 权限；Billing 里要有有效的默认付款方式；账户要配置默认注册联系人，并接受 Domain Registration Agreement。请到 Cloudflare Dashboard > My Profile > API Tokens 创建。Registrar API 官方说明：https://developers.cloudflare.com/registrar/registrar-api/ Token 创建说明：https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ Dashboard：https://dash.cloudflare.com/profile/api-tokens 它只会保存到这个本地 JSON 文件：{path}",
   "init.explain.max_price": "单域名预算保护。如果某个域名价格超过这个 USD 金额，NameSnipe 会在生成计划或购买前拒绝它。",
   "init.explain.max_total": "批次预算保护。如果本次预计注册总价超过这个 USD 金额，NameSnipe 会中止计划或真实购买。",
   "init.explain.tld_allowlist": "允许搜索和规划的域名后缀，用英文逗号分隔。这样可以避免误操作不想购买的后缀。",
