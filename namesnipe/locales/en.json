@@ -82,6 +82,12 @@
   "cli.buy.help": "Execute a dry-run or confirmed live purchase from a plan.",
   "cli.status.help": "Query registration status.",
   "cli.tui.help": "Open the Textual terminal UI.",
+  "cli.help.help": "Show NameSnipe help.",
+  "cli.help.command.help": "Optional command name to explain.",
+  "cli.help.title": "NameSnipe help",
+  "cli.help.command": "Command",
+  "cli.help.command_usage": "Run namesnipe {command} --help for full options.",
+  "cli.help.footer": "Use namesnipe <command> --help for detailed command options.",
   "cli.lang.help": "Temporarily use this language.",
   "cli.tlds.help": "Comma-separated TLD allowlist.",
   "cli.limit.help": "Maximum number of search results.",
@@ -126,5 +132,6 @@
   "errors.mixed_currency": "Plan contains mixed currencies and cannot be safely totaled.",
   "errors.no_domains": "No domains were provided.",
   "errors.cloudflare_api": "Cloudflare API error: {detail}",
+  "errors.unknown_command": "Unknown command: {command}.",
   "errors.unsupported_language": "Unsupported language: {language}."
 }

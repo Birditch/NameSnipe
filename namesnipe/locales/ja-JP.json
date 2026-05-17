@@ -82,6 +82,12 @@
   "cli.buy.help": "計画から dry-run または確認済みの実際の購入を実行します。",
   "cli.status.help": "登録状態を照会します。",
   "cli.tui.help": "Textual ターミナル UI を開きます。",
+  "cli.help.help": "NameSnipe のヘルプを表示します。",
+  "cli.help.command.help": "説明するコマンド名。省略できます。",
+  "cli.help.title": "NameSnipe ヘルプ",
+  "cli.help.command": "コマンド",
+  "cli.help.command_usage": "詳細なオプションは namesnipe {command} --help を実行してください。",
+  "cli.help.footer": "詳細なコマンドオプションは namesnipe <command> --help を使ってください。",
   "cli.lang.help": "この言語を一時的に使用します。",
   "cli.tlds.help": "カンマ区切りの TLD allowlist。",
   "cli.limit.help": "検索結果の最大件数。",
@@ -126,5 +132,6 @@
   "errors.mixed_currency": "計画に複数の通貨が含まれているため、安全に合計できません。",
   "errors.no_domains": "ドメインが指定されていません。",
   "errors.cloudflare_api": "Cloudflare API エラー: {detail}",
+  "errors.unknown_command": "不明なコマンドです: {command}。",
   "errors.unsupported_language": "未対応の言語です: {language}。"
 }

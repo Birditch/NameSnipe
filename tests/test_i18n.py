@@ -46,3 +46,11 @@ def test_cli_help_text_has_i18n_coverage_where_reasonable() -> None:
     search = command.commands["search"]
     option_names = {option for parameter in search.params for option in parameter.opts}
     assert "--lang" in option_names
+    assert "help" in command.commands
+
+
+def test_help_command_outputs_command_table() -> None:
+    result = CliRunner().invoke(app, ["help"], env={"NAMESNIPE_LANG": "en"})
+    assert result.exit_code == 0
+    assert "NameSnipe help" in result.stdout
+    assert "search" in result.stdout

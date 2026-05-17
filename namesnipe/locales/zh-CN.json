@@ -82,6 +82,12 @@
   "cli.buy.help": "根据计划执行试运行或确认后的真实购买。",
   "cli.status.help": "查询注册状态。",
   "cli.tui.help": "打开 Textual 终端 UI。",
+  "cli.help.help": "显示 NameSnipe 帮助。",
+  "cli.help.command.help": "可选，要解释的命令名称。",
+  "cli.help.title": "NameSnipe 帮助",
+  "cli.help.command": "命令",
+  "cli.help.command_usage": "执行 namesnipe {command} --help 查看完整参数。",
+  "cli.help.footer": "使用 namesnipe <命令> --help 查看详细参数。",
   "cli.lang.help": "临时使用指定语言。",
   "cli.tlds.help": "逗号分隔的 TLD allowlist。",
   "cli.limit.help": "搜索结果数量上限。",
@@ -126,5 +132,6 @@
   "errors.mixed_currency": "计划中包含多种币种，无法安全汇总。",
   "errors.no_domains": "没有提供域名。",
   "errors.cloudflare_api": "Cloudflare API 错误：{detail}",
+  "errors.unknown_command": "未知命令：{command}。",
   "errors.unsupported_language": "不支持的语言：{language}。"
 }

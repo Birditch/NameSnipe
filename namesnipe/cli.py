@@ -7,6 +7,7 @@ from typing import Annotated
 import typer
 from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
+from rich.table import Table
 
 from .cloudflare import CloudflareRegistrarClient
 from .config import load_config, save_config
@@ -35,6 +36,16 @@ class NameSnipeTyper(typer.Typer):
 
 
 app = NameSnipeTyper(help=t("app.subtitle"), no_args_is_help=True)
+COMMAND_HELP_KEYS = {
+    "init": "cli.init.help",
+    "search": "cli.search.help",
+    "check": "cli.check.help",
+    "plan": "cli.plan.help",
+    "buy": "cli.buy.help",
+    "status": "cli.status.help",
+    "tui": "cli.tui.help",
+    "help": "cli.help.help",
+}
 
 
 def _language_option() -> str | None:
@@ -80,6 +91,28 @@ def _domain_inputs(domains: list[str], file: Path | None) -> list[str]:
 def _print_init_explanation(key: str, **kwargs: object) -> None:
     console.print()
     console.print(f"[dim]{t(key, **kwargs)}[/dim]")
+
+
+@app.command("help", help=t("cli.help.help"))
+def help_command(
+    command: Annotated[str | None, typer.Argument(help=t("cli.help.command.help"))] = None,
+    lang: Annotated[str | None, _language_option()] = None,
+) -> None:
+    _load_configured_language(lang)
+    if command is not None:
+        if command not in COMMAND_HELP_KEYS:
+            raise NameSnipeError(t("errors.unknown_command", command=command))
+        console.print(Panel(t(COMMAND_HELP_KEYS[command]), title=f"namesnipe {command}"))
+        console.print(t("cli.help.command_usage", command=command))
+        return
+
+    table = Table(title=t("cli.help.title"))
+    table.add_column(t("cli.help.command"))
+    table.add_column(t("common.reason"))
+    for name, help_key in COMMAND_HELP_KEYS.items():
+        table.add_row(name, t(help_key))
+    console.print(table)
+    console.print(t("cli.help.footer"))
 
 
 @app.command("init", help=t("cli.init.help"))
